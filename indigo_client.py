@@ -30,17 +30,16 @@ class IndigoCollector(object):
 
         auth = None
         if self.username is not None:
-            self.logger.debug('digest auth -- %s', self.username)
+            self.logger.debug('configurint digest auth -- %s', self.username)
             auth = HTTPDigestAuth(self.username, self.password)
 
         url = f'http://{self.host}:{self.port}{path}'
-        self.logger.debug('=> %s', url)
         resp = requests.get(url, auth=auth)
+
+        self.logger.debug('=> %s -- %d bytes', url, len(resp.content))
 
         if not resp.ok:
             self.logger.warn('HTTP %d', resp.status_code)
-
-        self.logger.debug('retrieved %d bytes', len(resp.content))
 
         return resp.json()
 
