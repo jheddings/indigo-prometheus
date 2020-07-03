@@ -10,11 +10,13 @@ import requests
 import logging
 import logging.config
 
+from datetime import datetime
+
 from requests.auth import HTTPDigestAuth
 from prometheus_client import start_http_server, Metric, REGISTRY
 
 ################################################################################
-class IndigoCollector(object):
+class IndigoServer(object):
 
     def __init__(self, conf):
         self.host = conf.get('hostname', 'localhost')
@@ -22,10 +24,10 @@ class IndigoCollector(object):
         self.username = conf.get('username', None)
         self.password = conf.get('password', None)
 
-        self.logger = logging.getLogger('IndigoCollector')
+        self.logger = logging.getLogger('IndigoServer')
 
     #---------------------------------------------------------------------------
-    def _indigo_api_get(self, path):
+    def get(self, path):
         self.logger.debug('retriving API path: %s', path)
 
         auth = None
@@ -43,6 +45,13 @@ class IndigoCollector(object):
 
         return resp.json()
 
+################################################################################
+class IndigoCollector(object):
+
+    def __init__(self, server):
+        self.server = server
+        self.logger = logging.getLogger('IndigoCollector')
+
     #---------------------------------------------------------------------------
     def value_type(self, value):
         if type(value) is int:
@@ -55,12 +64,14 @@ class IndigoCollector(object):
 
     #---------------------------------------------------------------------------
     def collect(self):
-        indigo_vars = self._indigo_api_get('/variables.json/')
+        start_time = datetime.now()
+
+        indigo_vars = self.server.get('/variables.json/')
 
         for indigo_var in indigo_vars:
-            var_detail = self._indigo_api_get(indigo_var['restURL'])
+            var_detail = self.server.get(indigo_var['restURL'])
 
-            name = f'indigo_var_{indigo_var["nameURLEncoded"]}'
+            name = f'indigo_var_{var_detail["name"]}'
             value = var_detail['value']
             value_type = self.value_type(value)
 
@@ -69,7 +80,8 @@ class IndigoCollector(object):
 
             labels = {
                 'visible' : str(var_detail['displayInUI']),
-                'parent' : var_detail['restParent']
+                'parent' : var_detail['restParent'],
+                'id' : str(var_detail['id'])
             }
 
             metric = Metric(name, var_detail['name'], value_type)
@@ -117,8 +129,10 @@ def load_config(config_file):
 ################################################################################
 def run_server_loop():
     try:
+
         while True:
             time.sleep(1)
+
     except KeyboardInterrupt:
         logging.info('Canceled by user')
 
@@ -135,7 +149,8 @@ if __name__ == '__main__':
     start_http_server(port)
 
     # add the indigo collector to the metrics registry
-    collector = IndigoCollector(conf['Indigo API'])
+    server = IndigoServer(conf['Indigo API'])
+    collector = IndigoCollector(server=server)
     REGISTRY.register(collector)
 
     run_server_loop()
