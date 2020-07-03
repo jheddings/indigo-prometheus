@@ -32,7 +32,7 @@ class IndigoServer(object):
 
         auth = None
         if self.username is not None:
-            self.logger.debug('configurint digest auth -- %s', self.username)
+            self.logger.debug('configuring digest auth -- %s', self.username)
             auth = HTTPDigestAuth(self.username, self.password)
 
         url = f'http://{self.host}:{self.port}{path}'
@@ -63,6 +63,28 @@ class IndigoCollector(object):
         return None
 
     #---------------------------------------------------------------------------
+    def build_metric(self, detail):
+        # TODO add logging...
+
+        name = detail['name']
+        pro_name = f'indigo_var_{name}'
+
+        value = detail['value']
+        value_type = self.value_type(value)
+
+        # TODO add support for "info" types (e.g. summary with value of 1)
+        if value_type is None:
+            return None
+
+        # pull all detail into labels, excluding special keys
+        labels = { k: str(v) for (k, v) in detail.items() if k not in [ 'name', 'value' ] }
+
+        metric = Metric(pro_name, detail['name'], value_type)
+        metric.add_sample(pro_name, value=value, labels=labels)
+
+        return metric
+
+    #---------------------------------------------------------------------------
     def collect(self):
         start_time = datetime.now()
 
@@ -70,24 +92,8 @@ class IndigoCollector(object):
 
         for indigo_var in indigo_vars:
             var_detail = self.server.get(indigo_var['restURL'])
-
-            name = f'indigo_var_{var_detail["name"]}'
-            value = var_detail['value']
-            value_type = self.value_type(value)
-
-            if value_type is None:
-                continue
-
-            labels = {
-                'visible' : str(var_detail['displayInUI']),
-                'parent' : var_detail['restParent'],
-                'id' : str(var_detail['id'])
-            }
-
-            metric = Metric(name, var_detail['name'], value_type)
-            metric.add_sample(name, value=value, labels=labels)
-
-            yield metric
+            metric = self.build_metric(var_detail)
+            if metric is not None: yield metric
 
 ################################################################################
 def parse_args():
