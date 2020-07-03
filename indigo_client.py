@@ -74,35 +74,9 @@ class IndigoCollector(object):
             }
 
             metric = Metric(name, var_detail['name'], value_type)
-            metric.add_sample(f'{name}_value', value=value, labels=labels)
+            metric.add_sample(name, value=value, labels=labels)
 
             yield metric
-
-    #---------------------------------------------------------------------------
-    def old_collect(self):
-        vars_json = self._indigo_api_get('/variables.json/')
-
-        # Convert requests and duration to a summary in seconds
-        metric = Metric('svc_requests_duration_seconds',
-            'Requests time taken in seconds', 'summary')
-        metric.add_sample('svc_requests_duration_seconds_count',
-            value=response['requests_handled'], labels={})
-        metric.add_sample('svc_requests_duration_seconds_sum',
-            value=response['requests_duration_milliseconds'] / 1000.0, labels={})
-        yield metric
-
-        # Counter for the failures
-        metric = Metric('svc_requests_failed_total',
-           'Requests failed', 'summary')
-        metric.add_sample('svc_requests_failed_total',
-           value=response['request_failures'], labels={})
-        yield metric
-
-        # Metrics with labels for the documents loaded
-        metric = Metric('svc_documents_loaded', 'Requests failed', 'gauge')
-        for k, v in response['documents_loaded'].items():
-          metric.add_sample('svc_documentes_loaded', value=v, labels={'repository': k})
-        yield metric
 
 ################################################################################
 def parse_args():
