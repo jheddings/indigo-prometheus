@@ -1,0 +1,169 @@
+# Prometheus client for Indigo
+
+import os
+import json
+import sys
+import time
+
+import requests
+
+import logging
+import logging.config
+
+from requests.auth import HTTPDigestAuth
+from prometheus_client import start_http_server, Metric, REGISTRY
+
+################################################################################
+class IndigoCollector(object):
+
+    def __init__(self, conf):
+        self.host = conf.get('hostname', 'localhost')
+        self.port = conf.get('port', 8176)
+        self.username = conf.get('username', None)
+        self.password = conf.get('password', None)
+
+        self.logger = logging.getLogger('IndigoCollector')
+
+    #---------------------------------------------------------------------------
+    def _indigo_api_get(self, path):
+        self.logger.debug('retriving API path: %s', path)
+
+        auth = None
+        if self.username is not None:
+            self.logger.debug('digest auth -- %s', self.username)
+            auth = HTTPDigestAuth(self.username, self.password)
+
+        url = f'http://{self.host}:{self.port}{path}'
+        self.logger.debug('=> %s', url)
+        resp = requests.get(url, auth=auth)
+
+        if not resp.ok:
+            self.logger.warn('HTTP %d', resp.status_code)
+
+        self.logger.debug('retrieved %d bytes', len(resp.content))
+
+        return resp.json()
+
+    #---------------------------------------------------------------------------
+    def value_type(self, value):
+        if type(value) is int:
+            return 'gauge'
+
+        if type(value) is float:
+            return 'gauge'
+
+        return None
+
+    #---------------------------------------------------------------------------
+    def collect(self):
+        indigo_vars = self._indigo_api_get('/variables.json/')
+
+        for indigo_var in indigo_vars:
+            var_detail = self._indigo_api_get(indigo_var['restURL'])
+
+            name = f'indigo_var_{indigo_var["nameURLEncoded"]}'
+            value = var_detail['value']
+            value_type = self.value_type(value)
+
+            if value_type is None:
+                continue
+
+            labels = {
+                'visible' : str(var_detail['displayInUI']),
+                'parent' : var_detail['restParent']
+            }
+
+            metric = Metric(name, var_detail['name'], value_type)
+            metric.add_sample(f'{name}_value', value=value, labels=labels)
+
+            yield metric
+
+    #---------------------------------------------------------------------------
+    def old_collect(self):
+        vars_json = self._indigo_api_get('/variables.json/')
+
+        # Convert requests and duration to a summary in seconds
+        metric = Metric('svc_requests_duration_seconds',
+            'Requests time taken in seconds', 'summary')
+        metric.add_sample('svc_requests_duration_seconds_count',
+            value=response['requests_handled'], labels={})
+        metric.add_sample('svc_requests_duration_seconds_sum',
+            value=response['requests_duration_milliseconds'] / 1000.0, labels={})
+        yield metric
+
+        # Counter for the failures
+        metric = Metric('svc_requests_failed_total',
+           'Requests failed', 'summary')
+        metric.add_sample('svc_requests_failed_total',
+           value=response['request_failures'], labels={})
+        yield metric
+
+        # Metrics with labels for the documents loaded
+        metric = Metric('svc_documents_loaded', 'Requests failed', 'gauge')
+        for k, v in response['documents_loaded'].items():
+          metric.add_sample('svc_documentes_loaded', value=v, labels={'repository': k})
+        yield metric
+
+################################################################################
+def parse_args():
+    import argparse
+
+    argp = argparse.ArgumentParser(description='Prometheus metrics client for Indigo')
+
+    argp.add_argument('--config', default='indigo_client.cfg',
+                      help='configuration file (default: indigo_client.cfg)')
+
+    #argp.add_argument('params', nargs=argparse.REMAINDER)
+
+    return argp.parse_args()
+
+################################################################################
+def load_config(config_file):
+    import yaml
+    import logging.config
+
+    try:
+        from yaml import CLoader as YamlLoader
+    except ImportError:
+        from yaml import Loader as YamlLoader
+
+    if not os.path.exists(config_file):
+        logging.warning('!! config file does not exist: %s', config_file)
+        return None
+
+    with open(config_file, 'r') as fp:
+        conf = yaml.load(fp, Loader=YamlLoader)
+
+    if 'Logging' in conf:
+        logging.config.dictConfig(conf['Logging'])
+
+    logging.debug('!! config file loaded: %s', config_file)
+
+    return conf
+
+################################################################################
+def run_server_loop():
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        logging.info('Canceled by user')
+
+################################################################################
+## MAIN ENTRY
+if __name__ == '__main__':
+
+    args = parse_args()
+    conf = load_config(args.config)
+
+    # start the server on the configured port
+    port = conf['Metrics Endpoint']['port']
+    logging.info('Starting metrics endpoint on port: %d', port)
+    start_http_server(port)
+
+    # add the indigo collector to the metrics registry
+    collector = IndigoCollector(conf['Indigo API'])
+    REGISTRY.register(collector)
+
+    run_server_loop()
+
