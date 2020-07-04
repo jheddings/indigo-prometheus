@@ -1,0 +1,3 @@
+[submodule "iplug"]
+	path = iplug
+	url = git@github.com:jheddings/indigo-iplug.git
