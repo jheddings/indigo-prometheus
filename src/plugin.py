@@ -121,8 +121,7 @@ class Plugin(iplug.PluginBase):
             'enabled' : str(dev.enabled),
             'visible' : str(dev.remoteDisplay),
             'status' : dev.displayStateValUi,
-            #'protocol' : dev.protocol,
-            #'model' : dev.model,
+            'model' : dev.model,
             'name' : dev.name
         }
 
