@@ -5,7 +5,7 @@
 
   <Field type="checkbox" id="collect_device_states" defaultValue="false">
     <Label>Report Device States:</Label>
-    <Description> Present device states through the endpoint</Description>
+    <Description> Present all device states through the endpoint</Description>
   </Field>
 
   <Field type="checkbox" id="collect_variables" defaultValue="true">
