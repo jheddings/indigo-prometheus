@@ -70,8 +70,8 @@ class Plugin(iplug.PluginBase):
     def build_var_metric(self, var):
         self.logger.debug('reading variable data -- %s => %s', var.name, var.value)
 
-        # XXX should we use variable ID instead, like SQL Logger?
-        pro_name = 'indigo_var_%s' % var.name
+        # use variable ID for metric name, like SQL Logger
+        pro_name = 'indigo_var_%d' % var.id
 
         value = self.get_safe_value(var.value)
         if value is None: return None
@@ -82,11 +82,11 @@ class Plugin(iplug.PluginBase):
         labels = {
             'readOnly' : str(var.readOnly),
             'visible' : str(var.remoteDisplay),
-            'id' : str(var.id)
+            'name' : var.name
         }
 
         metric = Metric(pro_name, var.name, value_type)
-        metric.add_sample(pro_name, value=value, labels=labels)
+        metric.add_sample(pro_name + '_value', value=value, labels=labels)
 
         return metric
 
