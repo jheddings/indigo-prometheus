@@ -41,7 +41,7 @@ class Plugin(iplug.PluginBase):
     def loadPluginPrefs(self, prefs):
         iplug.PluginBase.loadPluginPrefs(self, prefs)
 
-        self.collect_device_states = self.getPref(prefs, 'collect_device_states', False)
+        self.collect_devices = self.getPref(prefs, 'collect_devices', True)
         self.collect_variables = self.getPref(prefs, 'collect_variables', True)
 
     #---------------------------------------------------------------------------
@@ -53,7 +53,7 @@ class Plugin(iplug.PluginBase):
                 metric = self.build_var_metric(indigo_var)
                 if metric is not None: yield metric
 
-        if self.collect_device_states:
+        if self.collect_devices:
             for indigo_dev in indigo.devices:
                 metric = self.build_dev_metric(indigo_dev)
                 if metric is not None: yield metric
@@ -105,6 +105,34 @@ class Plugin(iplug.PluginBase):
 
     #---------------------------------------------------------------------------
     def build_dev_metric(self, dev):
+        self.logger.debug('reading device data -- %s', dev.name)
+
+        # use device ID for metric name, like SQL Logger
+        pro_name = 'indigo_dev_%d' % dev.id
+
+        raw_value = dev.displayStateValRaw
+        self.logger.debug('raw display value: %s', str(raw_value))
+
+        value = self.get_safe_value(raw_value)
+        if value is None: return None
+
+        labels = {
+            'address' : dev.address,
+            'enabled' : str(dev.enabled),
+            'visible' : str(dev.remoteDisplay),
+            'status' : dev.displayStateValUi,
+            #'protocol' : dev.protocol,
+            #'model' : dev.model,
+            'name' : dev.name
+        }
+
+        metric = Metric(pro_name, dev.name, 'gauge')
+        metric.add_sample(pro_name + '_state', value=value, labels=labels)
+
+        return metric
+
+    #---------------------------------------------------------------------------
+    def build_states_metric(self, dev):
         self.logger.debug('reading device data -- %s', dev.name)
 
         # use device ID for metric name, like SQL Logger

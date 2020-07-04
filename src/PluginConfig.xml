@@ -3,9 +3,9 @@
 <PluginConfig>
   <SupportURL>http://forums.indigodomo.com/viewforum.php?f=TODO</SupportURL>
 
-  <Field type="checkbox" id="collect_device_states" defaultValue="false">
-    <Label>Report Device States:</Label>
-    <Description> Present all device states through the endpoint</Description>
+  <Field type="checkbox" id="collect_devices" defaultValue="true">
+    <Label>Report Devices:</Label>
+    <Description> Present all devices through the endpoint</Description>
   </Field>
 
   <Field type="checkbox" id="collect_variables" defaultValue="true">
