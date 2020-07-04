@@ -18,6 +18,9 @@ class Plugin(iplug.PluginBase):
 
         port = int(pluginPrefs.get('port', 9176))
 
+        # XXX if we could register custom API paths directly within Indigo,
+        # we could potentially avoid spinning up an additional HTTP server...
+
         self.logger.info('Starting Prometheus endpoint on port %d', port)
         start_http_server(port)
 
@@ -37,6 +40,8 @@ class Plugin(iplug.PluginBase):
     #---------------------------------------------------------------------------
     def loadPluginPrefs(self, prefs):
         iplug.PluginBase.loadPluginPrefs(self, prefs)
+
+        self.collect_device_states = self.getPref(prefs, 'collect_device_states', False)
         self.collect_variables = self.getPref(prefs, 'collect_variables', True)
 
     #---------------------------------------------------------------------------
@@ -46,6 +51,11 @@ class Plugin(iplug.PluginBase):
         if self.collect_variables:
             for indigo_var in indigo.variables:
                 metric = self.build_var_metric(indigo_var)
+                if metric is not None: yield metric
+
+        if self.collect_device_states:
+            for indigo_dev in indigo.devices:
+                metric = self.build_dev_metric(indigo_dev)
                 if metric is not None: yield metric
 
         self.logger.debug('END metrics collection')
@@ -82,27 +92,45 @@ class Plugin(iplug.PluginBase):
         value = self.get_safe_value(var.value)
         if value is None: return None
 
-        value_type = self.value_type(value)
-        if value_type is None: return None
-
         labels = {
             'readOnly' : str(var.readOnly),
             'visible' : str(var.remoteDisplay),
             'name' : var.name
         }
 
-        metric = Metric(pro_name, var.name, value_type)
+        metric = Metric(pro_name, var.name, 'gauge')
         metric.add_sample(pro_name + '_value', value=value, labels=labels)
 
         return metric
 
     #---------------------------------------------------------------------------
-    def value_type(self, value):
-        if type(value) is int:
-            return 'gauge'
+    def build_dev_metric(self, dev):
+        self.logger.debug('reading device data -- %s', dev.name)
 
-        if type(value) is float:
-            return 'gauge'
+        # use device ID for metric name, like SQL Logger
+        pro_name = 'indigo_dev_%d' % dev.id
 
-        return None
+        labels = {
+            'address' : dev.address,
+            'enabled' : str(dev.enabled),
+            'visible' : str(dev.remoteDisplay),
+            #'protocol' : dev.protocol,
+            #'model' : dev.model,
+            'name' : dev.name
+        }
+
+        metric = Metric(pro_name, dev.name, 'gauge')
+
+        for state in dev.states:
+            state_name = pro_name + '_' + state
+            value = dev.states[state]
+
+            self.logger.debug('>> %s => %s', state, value)
+
+            state_value = self.get_safe_value(value)
+            if state_value is None: continue
+
+            metric.add_sample(state_name, value=state_value, labels=labels)
+
+        return metric
 
