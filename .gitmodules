@@ -1,3 +1,6 @@
 [submodule "iplug"]
 	path = iplug
 	url = git@github.com:jheddings/indigo-iplug.git
+[submodule "modules/client_python"]
+	path = modules/client_python
+	url = git@github.com:prometheus/client_python.git
