@@ -3,11 +3,18 @@
 <PluginConfig>
   <SupportURL>http://forums.indigodomo.com/viewforum.php?f=TODO</SupportURL>
 
+  <Field type="checkbox" id="collect_variables" defaultValue="true">
+    <Label>Report Variables:</Label>
+    <Description> Present variables through the endpoint</Description>
+  </Field>
+
+  <Field id="separator1" type="separator" />
+
   <Field type="textfield" id="port" defaultValue="9176">
-    <Label>Port:</Label>
+    <Label>Listen Port:</Label>
   </Field>
   <Field id="portHelp" type="label" fontSize="mini" alignWithControl="true">
-    <Label>Endpoint port for presenting metrics</Label>
+    <Label>Endpoint port for presenting metrics (requires reload)</Label>
   </Field>
 
   <Field id="logLevel" type="menu" defaultValue="20">

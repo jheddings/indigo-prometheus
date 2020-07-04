@@ -35,12 +35,18 @@ class Plugin(iplug.PluginBase):
         return ((len(errors) == 0), values, errors)
 
     #---------------------------------------------------------------------------
+    def loadPluginPrefs(self, prefs):
+        iplug.PluginBase.loadPluginPrefs(self, prefs)
+        self.collect_variables = self.getPref(prefs, 'collect_variables', True)
+
+    #---------------------------------------------------------------------------
     def collect(self):
         self.logger.debug('BEGIN metrics collection')
 
-        for indigo_var in indigo.variables:
-            metric = self.build_var_metric(indigo_var)
-            if metric is not None: yield metric
+        if self.collect_variables:
+            for indigo_var in indigo.variables:
+                metric = self.build_var_metric(indigo_var)
+                if metric is not None: yield metric
 
         self.logger.debug('END metrics collection')
 
