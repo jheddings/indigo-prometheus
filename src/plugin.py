@@ -116,11 +116,14 @@ class Plugin(iplug.PluginBase):
         value = self.get_safe_value(raw_value)
         if value is None: return None
 
+        # XXX we don't want to include status since each change in
+        # labels creates a new time series in Prometheus
+
         labels = {
             'address' : dev.address,
             'enabled' : str(dev.enabled),
             'visible' : str(dev.remoteDisplay),
-            'status' : dev.displayStateValUi,
+            #'status' : dev.displayStateValUi,
             'model' : dev.model,
             'name' : dev.name
         }
