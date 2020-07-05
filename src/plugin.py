@@ -7,6 +7,8 @@ import iplug
 # XXX included as part of the plugin structure
 from prometheus_client import start_http_server, Metric, REGISTRY
 
+# TODO add support for custom devices to expose device states
+
 ################################################################################
 class Plugin(iplug.PluginBase):
 
@@ -125,7 +127,7 @@ class Plugin(iplug.PluginBase):
             'visible' : str(dev.remoteDisplay),
             #'status' : dev.displayStateValUi,
             'model' : dev.model,
-            'name' : dev.name
+            'name' : dev.name  # XXX should we use __name__ instead?
         }
 
         metric = Metric(pro_name, dev.name, 'gauge')
