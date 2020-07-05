@@ -43,15 +43,20 @@ Modify `scrape_interval` or other configuration values as needed for your instal
 Once you start collecting data, Prometheus has a rich query language called
 [PromQL](https://prometheus.io/docs/prometheus/latest/querying/basics/).
 
-### Example: track the value of a single variable over time (note variables referenced by ID):
+### Example: track the value of a single variable over time
+
+Variables are stored in time series using their ID:
 
     indigo_var_1061581346_value
 
 ![](https://github.com/jheddings/indigo-prometheus/raw/master/etc/images/example_variable_over_time.png)
 
-The same variable can be referenced by name using the label selector: `{name="cfg_irrigation_wx_coef"}`
+*TIP:* The same variable can be referenced by name using a label selector:
+`{name="cfg_irrigation_wx_coef"}`
 
-### Example: show how many SwitchLinc devices are on throughout the day:
+### Example: show how many SwitchLinc devices are on throughout the day
+
+Using label selectors and regular expressions, metrics can be combined into custom reports.
 
     sum({model=~"SwitchLinc.*"})
 
