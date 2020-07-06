@@ -56,7 +56,8 @@ Variables are stored in time series using their ID:
 
 ### Example: show how many SwitchLinc devices are on throughout the day
 
-Using label selectors and regular expressions, metrics can be combined into custom reports.
+Device states are either on (1) or off (0).  Using label selectors and regular expressions,
+metrics can be combined into custom reports.
 
     sum({model=~"SwitchLinc.*"})
 
