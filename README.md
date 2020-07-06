@@ -11,6 +11,11 @@ visualization tools (such as [Grafana](https://grafana.com)).
 You can choose to present variables, devices or both.  If you run into performance issues
 with either option, please submit an issue.
 
+### Custom Metrics
+
+In addition to the automatic metrics for devices and variables, you can create devices
+in Indigo that will present custom metrics for scraping.
+
 ## Viewing Data
 
 Once your plugin is configured, you can view the metrics by visiting

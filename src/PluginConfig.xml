@@ -13,6 +13,13 @@
     <Description> Present variables through the endpoint</Description>
   </Field>
 
+  <Field id="user_info" type="textfield" defaultValue="">
+    <Label>User Info:</Label>
+  </Field>
+  <Field id="user_info_help" type="label" fontSize="mini" alignWithControl="true">
+    <Label>(optional) reported in 'user_info' label - supports Indigo substitutions</Label>
+  </Field>
+
   <Field id="separator1" type="separator" />
 
   <Field type="textfield" id="port" defaultValue="9176">
