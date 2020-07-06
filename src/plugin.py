@@ -168,6 +168,9 @@ class Plugin(iplug.PluginBase):
 
     #---------------------------------------------------------------------------
     def buildDevMetric(self, dev):
+        # don't report back our own devices...
+        if dev.pluginId == self.pluginId: return None
+
         self.logger.debug('reading device data -- %s', dev.name)
 
         # use device ID for metric name, like SQL Logger
@@ -233,9 +236,6 @@ class Plugin(iplug.PluginBase):
             labels['user_info'] = self.substitute(user_info)
 
         self.logger.debug('%s (%s) -- %s <%s>', pro_name, dev.name, value, type(value))
-
-        # XXX do we really need to do this?  won't the state of the device be picked
-        # up automatically?  maybe we want it for the custom label and series ID...
 
         # TODO switch to xxxxMetricFamily
         metric = Metric(pro_name, dev.name, dev.deviceTypeId)
