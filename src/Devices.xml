@@ -4,7 +4,7 @@
 
   <!--
       XXX we could have a drop-down for the device type (gauge / counter)
-      I kind of like having cusom metrics that mirror the Prometheus types...
+      I kind of like having custom metrics that mirror the Prometheus types...
   -->
 
   <Device type="custom" id="gauge">
@@ -13,13 +13,13 @@
     <ConfigUI>
       <Field id="device_id" type="menu" defaultValue="">
         <Label>Device:</Label>
-        <List class="self" filter="" method="getDeviceList" dynamicReload="true" />
+        <List class="self" filter="" method="buildDeviceList" dynamicReload="true" />
         <CallbackMethod>updateConfigUI</CallbackMethod>
       </Field>
 
       <Field id="state_id" type="menu" defaultValue="">
         <Label>Device State:</Label>
-        <List class="self" filter="" method="getDeviceStateList" dynamicReload="true" />
+        <List class="self" filter="" method="buildDeviceStateList" dynamicReload="true" />
       </Field>
 
       <Field id="user_info" type="textfield" defaultValue="">
@@ -55,13 +55,13 @@
     <ConfigUI>
       <Field id="device_id" type="menu" defaultValue="">
         <Label>Device:</Label>
-        <List class="self" filter="" method="getDeviceList" dynamicReload="true" />
+        <List class="self" filter="" method="buildDeviceList" dynamicReload="true" />
         <CallbackMethod>updateConfigUI</CallbackMethod>
       </Field>
 
       <Field id="state_id" type="menu" defaultValue="">
         <Label>Device State:</Label>
-        <List class="self" filter="" method="getDeviceStateList" dynamicReload="true" />
+        <List class="self" filter="" method="buildDeviceStateList" dynamicReload="true" />
       </Field>
 
       <Field id="user_info" type="textfield" defaultValue="">

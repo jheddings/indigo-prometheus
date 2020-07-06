@@ -51,7 +51,7 @@ class Plugin(iplug.PluginBase):
         self.user_info = self.getPref(prefs, 'user_info', None)
 
     #---------------------------------------------------------------------------
-    def getDeviceList(self, filter=None, values=None, typeId=None, targetId=0):
+    def buildDeviceList(self, filter=None, values=None, typeId=None, targetId=0):
         devices = list()
 
         for device in indigo.devices:
@@ -61,7 +61,7 @@ class Plugin(iplug.PluginBase):
         return devices
 
     #---------------------------------------------------------------------------
-    def getDeviceStateList(self, filter=None, values=None, typeId=None, targetId=0):
+    def buildDeviceStateList(self, filter=None, values=None, typeId=None, targetId=0):
         states = list()
 
         if values is not None and 'device_id' in values:
@@ -72,11 +72,6 @@ class Plugin(iplug.PluginBase):
             states.extend(device.states.keys())
 
         return states
-
-    #---------------------------------------------------------------------------
-    def deviceStartComm(self, device):
-        iplug.PluginBase.deviceStartComm(self, device)
-        self.logger.debug(device.states.keys())
 
     #---------------------------------------------------------------------------
     def validateDeviceConfigUi(self, values, typeId, devId):
@@ -98,8 +93,9 @@ class Plugin(iplug.PluginBase):
         # update custom metrics first to make sure devices are up
         # to date for collecting regular device metrics later on...
         for custom_dev in indigo.devices.itervalues('self'):
-            metric = self.buildCustomMetric(custom_dev)
-            if metric is not None: yield metric
+            if custom_dev.enabled and custom_dev.configured:
+                metric = self.buildCustomMetric(custom_dev)
+                if metric is not None: yield metric
 
         if self.collect_variables:
             for indigo_var in indigo.variables:
