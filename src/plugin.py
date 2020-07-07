@@ -229,8 +229,11 @@ class Plugin(iplug.PluginBase):
         source_dev_id = int(dev.pluginProps['device_id'])
         source_device = indigo.devices[source_dev_id]
 
+        if not source_device.enabled: return None
+        if not source_device.configured: return None
+
         source_state_name = dev.pluginProps['state_id']
-        current_value = source_device.states[source_state_name]
+        current_value = source_device.states.get(source_state_name, None)
 
         self.logger.debug('source device state -- %s[%s] => %s',
                           source_device.name, source_state_name, str(current_value))
