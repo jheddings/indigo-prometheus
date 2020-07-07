@@ -93,9 +93,8 @@ class Plugin(iplug.PluginBase):
         # update custom metrics first to make sure devices are up
         # to date for collecting regular device metrics later on...
         for custom_dev in indigo.devices.itervalues('self'):
-            if custom_dev.enabled and custom_dev.configured:
-                metric = self.buildCustomMetric(custom_dev)
-                if metric is not None: yield metric
+            metric = self.buildCustomMetric(custom_dev)
+            if metric is not None: yield metric
 
         if self.collect_variables:
             for indigo_var in indigo.variables:
@@ -169,6 +168,9 @@ class Plugin(iplug.PluginBase):
 
     #---------------------------------------------------------------------------
     def buildDevMetric(self, dev):
+        if not dev.enabled: return None
+        if not dev.configured: return None
+
         # don't report back our own devices...
         if dev.pluginId == self.pluginId: return None
 
@@ -203,6 +205,9 @@ class Plugin(iplug.PluginBase):
 
     #---------------------------------------------------------------------------
     def buildCustomMetric(self, dev):
+        if not dev.enabled: return None
+        if not dev.configured: return None
+
         self.logger.debug('building custom metric -- %s', dev.name)
 
         # grab the source device information
