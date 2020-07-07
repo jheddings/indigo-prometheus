@@ -6,7 +6,7 @@ import time
 import iplug
 
 # XXX included as part of the plugin structure
-from prometheus_client import start_http_server, Metric, REGISTRY
+from prometheus_client import start_http_server, Gauge, Counter, Metric, REGISTRY
 
 # TODO review naming conventions (underscore vs camel case)
 
@@ -111,31 +111,33 @@ class Plugin(iplug.PluginBase):
 
     #---------------------------------------------------------------------------
     def getSafeValue(self, value):
-        # TODO handle boolean string values (e.g. yes/no, true/false, active/inactive)
-
         # don't cast if the value is already a safe type
-        if isinstance(value, (float, int)):
+        if isinstance(value, (float, int, bool)):
             return value
 
         # it's not likely that we will see these types from Indigo, but just in case...
         if isinstance(value, (list, set, tuple, dict, bytes)):
             return None
 
+        # check for "boolean strings"
+        if iplug.valueIsTrue(value):
+            return True
+        elif iplug.valueIsFalse(value):
+            return False
+
+        # attempt casting as an int...
         try:
-            int_value = int(value)
-            self.logger.debug('>> %s :: int(%d)', type(value), int_value)
-            return int_value
+            return int(value)
         except (ValueError, TypeError):
             pass
 
+        # attempt casting as a float...
         try:
-            float_value = float(value)
-            self.logger.debug('>> %s :: float(%f)', type(value), float_value)
-            return float_value
+            return float(value)
         except (ValueError, TypeError):
             pass
 
-        self.logger.debug('>> %s :: None(%s)', type(value), value)
+        self.logger.debug('could not convert %s :: %s', value, type(value))
 
         return None
 
@@ -160,7 +162,6 @@ class Plugin(iplug.PluginBase):
 
         self.logger.debug('%s (%s) -- %s <%s>', pro_name, var.name, value, type(value))
 
-        # TODO switch to GaugeMetricFamily
         metric = Metric(pro_name, var.name, 'gauge')
         metric.add_sample(pro_name, value=value, labels=labels)
 
@@ -195,7 +196,6 @@ class Plugin(iplug.PluginBase):
 
         self.logger.debug('%s (%s) -- %s <%s>', pro_name, dev.name, value, type(value))
 
-        # TODO switch to GaugeMetricFamily
         metric = Metric(pro_name, dev.name, 'gauge')
         metric.add_sample(pro_name, value=value, labels=labels)
 
@@ -237,7 +237,6 @@ class Plugin(iplug.PluginBase):
 
         self.logger.debug('%s (%s) -- %s <%s>', pro_name, dev.name, value, type(value))
 
-        # TODO switch to xxxxMetricFamily
         metric = Metric(pro_name, dev.name, dev.deviceTypeId)
         metric.add_sample(pro_name, value=value, labels=labels)
 
