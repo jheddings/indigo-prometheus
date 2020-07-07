@@ -6,7 +6,8 @@ import time
 import iplug
 
 # XXX included as part of the plugin structure
-from prometheus_client import start_http_server, Gauge, Counter, Metric, REGISTRY
+from prometheus_client import start_http_server, Metric
+from prometheus_client.core import GaugeMetricFamily, CounterMetricFamily, REGISTRY
 
 # TODO review naming conventions (underscore vs camel case)
 
@@ -54,9 +55,20 @@ class Plugin(iplug.PluginBase):
     def buildDeviceList(self, filter=None, values=None, typeId=None, targetId=0):
         devices = list()
 
+        # this could probably be done with some filtering and clever list comprehension
+        # but spelling it out makes it easy to see what we want to put in the menu
+
         for device in indigo.devices:
-            if device.pluginId != self.pluginId:
-                devices.append([ device.id, device.name ])
+            if device.pluginId == self.pluginId:
+                continue
+
+            if not device.configured:
+                continue
+
+            if not device.enabled:
+                continue
+
+            devices.append([ device.id, device.name ])
 
         return devices
 
@@ -67,6 +79,7 @@ class Plugin(iplug.PluginBase):
         if values is not None and 'device_id' in values:
             device_id = int(values['device_id'])
             device = indigo.devices[device_id]
+
             self.logger.debug('loading states for device %s [%d]', device.name, device.id)
 
             states.extend(device.states.keys())
@@ -161,8 +174,9 @@ class Plugin(iplug.PluginBase):
 
         self.logger.debug('%s (%s) -- %s <%s>', pro_name, var.name, value, type(value))
 
-        metric = Metric(pro_name, var.name, 'gauge')
-        metric.add_sample(pro_name, value=value, labels=labels)
+        # XXX should we reuse the Metric object or recreate it every time?
+        metric = GaugeMetricFamily(pro_name, var.name, labels=labels.keys())
+        metric.add_metric(value=value, labels=labels.values())
 
         return metric
 
@@ -198,8 +212,9 @@ class Plugin(iplug.PluginBase):
 
         self.logger.debug('%s (%s) -- %s <%s>', pro_name, dev.name, value, type(value))
 
-        metric = Metric(pro_name, dev.name, 'gauge')
-        metric.add_sample(pro_name, value=value, labels=labels)
+        # XXX should we reuse the Metric object or recreate it every time?
+        metric = GaugeMetricFamily(pro_name, dev.name, labels=labels.keys())
+        metric.add_metric(value=value, labels=labels.values())
 
         return metric
 
@@ -242,8 +257,17 @@ class Plugin(iplug.PluginBase):
 
         self.logger.debug('%s (%s) -- %s <%s>', pro_name, dev.name, value, type(value))
 
-        metric = Metric(pro_name, dev.name, dev.deviceTypeId)
-        metric.add_sample(pro_name, value=value, labels=labels)
+        # XXX should we reuse the Metric object or recreate it every time?
+        # there are some challenges with reuse due the way we are making labels
+
+        if dev.deviceTypeId == 'gauge':
+            self.logger.debug('creating Gauge metric object')
+            metric = GaugeMetricFamily(pro_name, dev.name, labels=labels.keys())
+        elif dev.deviceTypeId == 'counter':
+            self.logger.debug('creating Counter metric object')
+            metric = CounterMetricFamily(pro_name, dev.name, labels=labels.keys())
+
+        metric.add_metric(value=value, labels=labels.values())
 
         dev.updateStateOnServer('status', value=value)
         dev.updateStateOnServer('lastReportedAt', value=time.strftime('%c'))
