@@ -6,15 +6,20 @@ import time
 import iplug
 
 # XXX included as part of the plugin structure
-from prometheus_client import start_http_server, Metric
+from prometheus_client import start_http_server, Metric, Gauge, Counter
 from prometheus_client.core import GaugeMetricFamily, CounterMetricFamily, REGISTRY
 
 # TODO review naming conventions (underscore vs camel case)
 
 # TODO look for refactoring opportunities to remove code duplication
 
+# basic idea of this plugin: create a gauge for all devices and variables in Indigo
+# the Prometheus HTTP server will automatically report all Metrics when called
+
 ################################################################################
 class Plugin(iplug.PluginBase):
+
+    metrics = dict()
 
     #---------------------------------------------------------------------------
     def __init__(self, pluginId, pluginDisplayName, pluginVersion, pluginPrefs):
@@ -30,10 +35,34 @@ class Plugin(iplug.PluginBase):
         self.logger.info('Starting Prometheus endpoint on port %d', port)
         start_http_server(port)
 
-        REGISTRY.register(self)
+        # TODO switch to reusable Gauge objects instead of a custom collector
 
-        # XXX not sure if we will need this or not...
+        REGISTRY.register(self)
         #indigo.devices.subscribeToChanges()
+
+    #---------------------------------------------------------------------------
+    def deviceUpdated(self, origDev, newDev):
+        indigo.PluginBase.deviceUpdated(self, origDev, newDev)
+        self.logger.debug('device updated - %s [%d]', newDev.name, newDev.id)
+
+    #---------------------------------------------------------------------------
+    def deviceCreated(self, device):
+        indigo.PluginBase.deviceCreated(self, device)
+        self.logger.debug('device created - %s [%d]', device.name, device.id)
+
+    #---------------------------------------------------------------------------
+    def deviceDeleted(self, device):
+        indigo.PluginBase.deviceDeleted(self, device)
+        self.logger.debug('device deleted - %s [%d]', device.name, device.id)
+        metrics.pop(device.id, None)
+
+    #---------------------------------------------------------------------------
+    def deviceStartComm(self, device):
+        iplug.PluginBase.deviceStartComm(self, device)
+
+    #---------------------------------------------------------------------------
+    def deviceStopComm(self, device):
+        iplug.PluginBase.deviceStopComm(self, device)
 
     #---------------------------------------------------------------------------
     def validatePrefsConfigUi(self, values):
@@ -174,7 +203,6 @@ class Plugin(iplug.PluginBase):
 
         self.logger.debug('%s (%s) -- %s <%s>', pro_name, var.name, value, type(value))
 
-        # XXX should we reuse the Metric object or recreate it every time?
         metric = GaugeMetricFamily(pro_name, var.name, labels=labels.keys())
         metric.add_metric(value=value, labels=labels.values())
 
@@ -185,7 +213,7 @@ class Plugin(iplug.PluginBase):
         if not dev.enabled: return None
         if not dev.configured: return None
 
-        # don't report back our own devices...
+        # don't report back our own devices (they are already covered)...
         if dev.pluginId == self.pluginId: return None
 
         self.logger.debug('reading device data -- %s', dev.name)
@@ -212,7 +240,6 @@ class Plugin(iplug.PluginBase):
 
         self.logger.debug('%s (%s) -- %s <%s>', pro_name, dev.name, value, type(value))
 
-        # XXX should we reuse the Metric object or recreate it every time?
         metric = GaugeMetricFamily(pro_name, dev.name, labels=labels.keys())
         metric.add_metric(value=value, labels=labels.values())
 
@@ -259,9 +286,6 @@ class Plugin(iplug.PluginBase):
             labels['user_info'] = self.substitute(user_info)
 
         self.logger.debug('%s (%s) -- %s <%s>', pro_name, dev.name, value, type(value))
-
-        # XXX should we reuse the Metric object or recreate it every time?
-        # there are some challenges with reuse due the way we are making labels
 
         if dev.deviceTypeId == 'gauge':
             self.logger.debug('creating Gauge metric object')
