@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 
 <PluginConfig>
-  <SupportURL>https://forums.indigodomo.com/viewtopic.php?f=134&amp;t=24144</SupportURL>
+  <SupportURL>https://forums.indigodomo.com/viewforum.php?f=347</SupportURL>
 
   <Field type="checkbox" id="collect_devices" defaultValue="true">
     <Label>Report Devices:</Label>
