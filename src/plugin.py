@@ -54,7 +54,7 @@ class Plugin(iplug.PluginBase):
     def deviceDeleted(self, device):
         indigo.PluginBase.deviceDeleted(self, device)
         self.logger.debug('device deleted - %s [%d]', device.name, device.id)
-        metrics.pop(device.id, None)
+        self.metrics.pop(device.id, None)
 
     #---------------------------------------------------------------------------
     def deviceStartComm(self, device):
