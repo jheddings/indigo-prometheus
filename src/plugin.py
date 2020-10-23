@@ -9,9 +9,10 @@ import iplug
 from prometheus_client import start_http_server, Metric, Gauge, Counter
 from prometheus_client.core import GaugeMetricFamily, CounterMetricFamily, REGISTRY
 
-# TODO review naming conventions (underscore vs camel case)
-
 # TODO look for refactoring opportunities to remove code duplication
+# (especially in the buildXXX functions for metrics)
+
+# TODO create a new "monitor" device that tracks on-time for other devices as a counter
 
 # basic idea of this plugin: create a gauge for all devices and variables in Indigo
 # the Prometheus HTTP server will automatically report all Metrics when called
@@ -35,34 +36,8 @@ class Plugin(iplug.PluginBase):
         self.logger.info('Starting Prometheus endpoint on port %d', port)
         start_http_server(port)
 
-        # TODO switch to reusable Gauge objects instead of a custom collector
-
+        # use a custom collector to report all devices and variables in Indigo
         REGISTRY.register(self)
-        #indigo.devices.subscribeToChanges()
-
-    #---------------------------------------------------------------------------
-    def deviceUpdated(self, origDev, newDev):
-        indigo.PluginBase.deviceUpdated(self, origDev, newDev)
-        self.logger.debug('device updated - %s [%d]', newDev.name, newDev.id)
-
-    #---------------------------------------------------------------------------
-    def deviceCreated(self, device):
-        indigo.PluginBase.deviceCreated(self, device)
-        self.logger.debug('device created - %s [%d]', device.name, device.id)
-
-    #---------------------------------------------------------------------------
-    def deviceDeleted(self, device):
-        indigo.PluginBase.deviceDeleted(self, device)
-        self.logger.debug('device deleted - %s [%d]', device.name, device.id)
-        self.metrics.pop(device.id, None)
-
-    #---------------------------------------------------------------------------
-    def deviceStartComm(self, device):
-        iplug.PluginBase.deviceStartComm(self, device)
-
-    #---------------------------------------------------------------------------
-    def deviceStopComm(self, device):
-        iplug.PluginBase.deviceStopComm(self, device)
 
     #---------------------------------------------------------------------------
     def validatePrefsConfigUi(self, values):
@@ -271,27 +246,26 @@ class Plugin(iplug.PluginBase):
             dev.setErrorStateOnServer('unsupported type: %s' % type(current_value))
             return None
 
-        # XXX do we need to sanitize state_name for Prometheus?
-        pro_name = 'indigo_dev_%d_%s' % (source_dev_id, source_state_name)
-
-        # XXX we are using the metric name, not the source device name here...
-        # that's intentional, but we may want to add the source device also
-
+        # configure labels for the metric
         labels = {
-            'name' : dev.name
+            'name' : dev.name,
+            'device' : source_device.name
         }
 
         user_info = dev.pluginProps.get('user_info', None)
         if user_info is not None and len(user_info) > 0:
             labels['user_info'] = self.substitute(user_info)
 
-        self.logger.debug('%s (%s) -- %s <%s>', pro_name, dev.name, value, type(value))
+        # create the Prometheus metric
+
+        pro_name = 'indigo_dev_%d_%s' % (source_dev_id, source_state_name)
+
+        self.logger.debug('"%s" => %s [%s] -- %s <%s>', dev.name, pro_name,
+                          dev.deviceTypeId, value, type(value))
 
         if dev.deviceTypeId == 'gauge':
-            self.logger.debug('creating Gauge metric object')
             metric = GaugeMetricFamily(pro_name, dev.name, labels=labels.keys())
         elif dev.deviceTypeId == 'counter':
-            self.logger.debug('creating Counter metric object')
             metric = CounterMetricFamily(pro_name, dev.name, labels=labels.keys())
 
         metric.add_metric(value=value, labels=labels.values())
@@ -300,4 +274,3 @@ class Plugin(iplug.PluginBase):
         dev.updateStateOnServer('lastReportedAt', value=time.strftime('%c'))
 
         return metric
-
